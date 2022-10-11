@@ -1,6 +1,5 @@
 import requests
-from .wall import Wall
-from vklib import wall
+from . import Api
 
 class VK:
     oauth_api_base="https://oauth.vk.com/"
@@ -37,7 +36,26 @@ class VK:
         return self.access_token!=None and self.__id > 0
     
     @property
-    def wall(self):
-        if not self.isAuth:
-            return None
-        return Wall(self.access_token, self.id, self.api_version)
+    def api(self):
+        return VKApiRunner(self)
+
+class VKApiRunner:
+    def __init__(self, vk, method=""):
+        self.vk=vk
+        self.method=method
+
+    def __getattribute__(self, __name: str):
+        d=object.__getattribute__(self, "method").split(".")
+        if d[0]=="":
+            d=[]
+        return type(self)(
+            object.__getattribute__(self, "vk"),
+            ".".join([*d, __name])
+        )
+    def __call__(self, **kwargs):
+        return Api.post(
+            object.__getattribute__(self, "vk").access_token,
+            object.__getattribute__(self, "method"),
+            object.__getattribute__(self, "vk").api_version,
+            **kwargs
+        )
